@@ -112,11 +112,28 @@ static ZEND_INI_MH(v8js_OnUpdateUseArrayAccess) /* {{{ */
 }
 /* }}} */
 
+static ZEND_INI_MH(v8js_OnUpdateThreadPoolSize) /* {{{ */
+{
+#if PHP_VERSION_ID < 80200
+	zend_long tmp = zend_atol(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
+#else
+	zend_long tmp = zend_ini_parse_quantity_warn(new_value, entry->name);
+#endif
+	if (tmp < 0 || tmp > 256) {
+		return FAILURE;
+	}
+
+	v8js_process_globals.thread_pool_size = static_cast<int>(tmp);
+	return SUCCESS;
+}
+/* }}} */
+
 ZEND_INI_BEGIN() /* {{{ */
 	ZEND_INI_ENTRY("v8js.flags", NULL, ZEND_INI_ALL, v8js_OnUpdateV8Flags)
 	ZEND_INI_ENTRY("v8js.icudtl_dat_path", NULL, ZEND_INI_ALL, v8js_OnUpdateIcudatPath)
 	ZEND_INI_ENTRY("v8js.use_date", "0", ZEND_INI_ALL, v8js_OnUpdateUseDate)
 	ZEND_INI_ENTRY("v8js.use_array_access", "0", ZEND_INI_ALL, v8js_OnUpdateUseArrayAccess)
+	ZEND_INI_ENTRY("v8js.thread_pool_size", "0", ZEND_INI_ALL, v8js_OnUpdateThreadPoolSize)
 ZEND_INI_END()
 /* }}} */
 
