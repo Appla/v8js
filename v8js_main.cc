@@ -44,8 +44,6 @@ static bool v8js_ini_string(char **field, const zend_string *new_value)/* {{{ */
 		v8js_process_globals.lock.unlock();
 		immutable = true;
 	}
-
-	v8js_process_globals.lock.unlock();
 #else
 	immutable = V8JSG(v8_initialized);
 #endif
@@ -61,13 +59,14 @@ static bool v8js_ini_string(char **field, const zend_string *new_value)/* {{{ */
 			*field = NULL;
 		}
 
-		if (!ZSTR_VAL(new_value)[0]) {
-			return SUCCESS;
+		if (ZSTR_VAL(new_value)[0]) {
+			*field = zend_strndup(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
 		}
-
-		*field = zend_strndup(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
 	}
 
+#ifdef ZTS
+	v8js_process_globals.lock.unlock();
+#endif
 	return SUCCESS;
 }
 /* }}} */
