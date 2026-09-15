@@ -159,6 +159,9 @@ struct _v8js_process_globals {
 	/* Path to icudtl.dat file */
 	char *icudtl_dat_path;
 
+	/* Number of V8 platform background worker threads */
+	int thread_pool_size;
+
 	std::unique_ptr<v8::Platform> v8_platform;
 };
 
