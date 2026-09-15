@@ -112,11 +112,65 @@ static ZEND_INI_MH(v8js_OnUpdateUseArrayAccess) /* {{{ */
 }
 /* }}} */
 
+#ifdef ZTS
+static ZEND_INI_MH(v8js_OnUpdateThreadPoolSize) /* {{{ */
+{
+	zend_string *errstr = NULL;
+	v8js_process_globals.lock.lock();
+
+	if (v8js_process_globals.v8_initialized) {
+		v8js_process_globals.lock.unlock();
+		return FAILURE;
+	}
+
+#if PHP_VERSION_ID < 80200
+	zend_long tmp = zend_atol(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
+#else
+	zend_long tmp = zend_ini_parse_quantity(new_value, &errstr);
+#endif
+	if (tmp < 0 || tmp > 64)	{
+		v8js_process_globals.lock.unlock();
+		return FAILURE;
+	}
+	v8js_process_globals.thread_pool_size = static_cast<int>(tmp);
+	v8js_process_globals.lock.unlock();
+	if (errstr) {
+		zend_error(E_WARNING, "Invalid \"%s\" setting. %s", ZSTR_VAL(entry->name), ZSTR_VAL(errstr));
+		zend_string_release(errstr);
+	}
+	return SUCCESS;
+}
+/* }}} */
+
+#else
+static ZEND_INI_MH(v8js_OnUpdateThreadPoolSize) /* {{{ */
+{
+	if (V8JSG(v8_initialized)) {
+		/* V8 already has been initialized -> cannot be changed anymore */
+		return FAILURE;
+	}
+
+#if PHP_VERSION_ID < 80200
+	zend_long tmp = zend_atol(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
+#else
+	zend_long tmp = zend_ini_parse_quantity_warn(new_value, entry->name);
+#endif
+	/* There is a hard limit in v8*/
+	if (tmp < 0 || tmp > 64) {
+		return FAILURE;
+	}
+	v8js_process_globals.thread_pool_size = static_cast<int>(tmp);
+	return SUCCESS;
+}
+/* }}} */
+#endif
+
 ZEND_INI_BEGIN() /* {{{ */
 	ZEND_INI_ENTRY("v8js.flags", NULL, ZEND_INI_ALL, v8js_OnUpdateV8Flags)
 	ZEND_INI_ENTRY("v8js.icudtl_dat_path", NULL, ZEND_INI_ALL, v8js_OnUpdateIcudatPath)
 	ZEND_INI_ENTRY("v8js.use_date", "0", ZEND_INI_ALL, v8js_OnUpdateUseDate)
 	ZEND_INI_ENTRY("v8js.use_array_access", "0", ZEND_INI_ALL, v8js_OnUpdateUseArrayAccess)
+	ZEND_INI_ENTRY("v8js.thread_pool_size", "0", ZEND_INI_ALL, v8js_OnUpdateThreadPoolSize)
 ZEND_INI_END()
 /* }}} */
 

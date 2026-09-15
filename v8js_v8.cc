@@ -68,7 +68,11 @@ void v8js_v8_init() /* {{{ */
 #endif
 #endif
 
-	v8js_process_globals.v8_platform = v8::platform::NewDefaultPlatform();
+	if (v8js_process_globals.thread_pool_size > 0) {
+		v8js_process_globals.v8_platform = v8::platform::NewDefaultPlatform(v8js_process_globals.thread_pool_size);
+	} else {
+		v8js_process_globals.v8_platform = v8::platform::NewDefaultPlatform();
+	}
 	v8::V8::InitializePlatform(v8js_process_globals.v8_platform.get());
 
 #ifdef V8_HAS_INITIALIZE_SANDBOX
